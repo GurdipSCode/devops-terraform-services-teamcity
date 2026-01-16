@@ -1,0 +1,127 @@
+pull_request_rules:
+
+  # ==========================================
+  # 1) Auto-merge Renovate PATCH updates (safe)
+  # ==========================================
+  - name: "Auto-merge: Renovate patch (Terraform)"
+    conditions:
+      - base=main
+      - author=renovate[bot]
+      - label=dependencies
+      - label=terraform
+      # Renovate usually includes this in the PR title
+      - title~=(?i)\bpatch\b
+      # Require ALL checks to be green
+      - check-success~=.*
+      - -check-failure~=.*
+      - -check-neutral~=.*
+      - -check-cancelled~=.*
+      - -check-timed_out~=.*
+    actions:
+      merge:
+        method: squash
+        commit_message: title+body
+
+  # ==================================================
+  # 2) Renovate MINOR updates: require 1 approval + CI
+  # ==================================================
+  - name: "Merge: Renovate minor (Terraform) with approval"
+    conditions:
+      - base=main
+      - author=renovate[bot]
+      - label=dependencies
+      - label=terraform
+      - title~=(?i)\bminor\b
+      - "#approved-reviews-by>=1"
+      - check-success~=.*
+      - -check-failure~=.*
+    actions:
+      merge:
+        method: squash
+        commit_message: title+body
+
+  # ==================================================
+  # 3) Renovate MAJOR updates: block + label + comment
+  # ==================================================
+  - name: "Block: Renovate major needs manual review"
+    conditions:
+      - base=main
+      - author=renovate[bot]
+      - title~=(?i)\bmajor\b
+    actions:
+      label:
+        add:
+          - requires-review
+          - breaking-change
+      comment:
+        message: |
+          ⚠️ **Major dependency update detected**
+          This PR is intentionally NOT auto-merged. Please review plan output and any provider/module changelogs.
+
+  # ==================================================
+  # 4) Human PRs: require 1 approval + CI
+  # ==================================================
+  - name: "Merge: human PR with approval + CI"
+    conditions:
+      - base=main
+      - author!=renovate[bot]
+      - "#approved-reviews-by>=1"
+      - check-success~=.*
+      - -check-failure~=.*
+    actions:
+      merge:
+        method: squash
+        commit_message: title+body
+
+  # ==================================================
+  # 5) Safety net: never merge failing PRs
+  # ==================================================
+  - name: "Close: failing PRs (safety net)"
+    conditions:
+      - check-failure~=.*
+    actions:
+      comment:
+        message: |
+          ❌ One or more required checks are failing. Fix CI before merging.
+      # (Optional) do NOT auto-close if you dislike this:
+      # close:
+      #   message: "Failing checks — closing to keep main protected."
+
+# ==========================================
+# Optional: Merge Queue (recommended for infra)
+# ==========================================
+queue_rules:
+  - name: "main-queue"
+    conditions:
+      - base=main
+      - check-success~=.*
+      - -check-failure~=.*
+
+pull_request_rules:
+  - name: "Queue: Renovate patch (Terraform)"
+    conditions:
+      - base=main
+      - author=renovate[bot]
+      - label=dependencies
+      - label=terraform
+      - title~=(?i)\bpatch\b
+      - check-success~=.*
+      - -check-failure~=.*
+    actions:
+      queue:
+        name: "main-queue"
+        method: squash
+        commit_message: title+body
+
+  - name: "Queue: human PRs"
+    conditions:
+      - base=main
+      - author!=renovate[bot]
+      - "#approved-reviews-by>=1"
+      - check-success~=.*
+      - -check-failure~=.*
+    actions:
+      queue:
+        name: "main-queue"
+        method: squash
+        commit_message: title+body
