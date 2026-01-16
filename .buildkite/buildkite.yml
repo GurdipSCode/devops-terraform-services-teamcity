@@ -1,0 +1,167 @@
+# .buildkite/pipeline.yml
+# Pipeline for Terraform SERVICE Repositories
+# Includes: git-cliff, overmind, fabric AI, terraform-docs
+
+env:
+  PROJECT_NAME: "{{project_name}}"
+  VAULT_ADDR: "{{vault_addr}}"
+  VAULT_NAMESPACE: "{{vault_namespace}}"
+  VAULT_AUTH_PATH: "jwt-buildkite"
+  VAULT_AUTH_ROLE: "terraform"
+  ENABLE_AUTO_BUMP: "true"
+  STABLE_BRANCH: "main"
+  ENABLE_SECURITY_SCANNING: "true"
+  ENABLE_AUTO_DOCUMENTATION: "true"
+  ENABLE_FABRIC_AI: "true"
+
+steps:
+  # ============================================================================
+  # PHASE 1: SETUP
+  # ============================================================================
+  
+  - group: "Setup Phase"
+    key: "setup-phase"
+    steps:
+      
+      - label: ":vault: Authenticate to Vault"
+        key: "vault-auth"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/setup/Connect-Vault.ps1"
+        artifact_paths:
+          - ".secrets/**/*"
+        agents:
+          queue: "windows"
+
+      - label: ":package: Install Tools"
+        key: "install-tools"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/setup/Install-Tools.ps1"
+        agents:
+          queue: "windows"
+
+  # ============================================================================
+  # PHASE 2: VALIDATION
+  # ============================================================================
+  
+  - group: "Validation Phase"
+    key: "validation-phase"
+    depends_on: "setup-phase"
+    steps:
+      
+      - label: ":terraform: Format Check"
+        key: "terraform-fmt"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/validation/Test-TerraformFormat.ps1"
+        agents:
+          queue: "windows"
+
+      - label: ":terraform: Validate Configuration"
+        key: "terraform-validate"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/validation/Test-TerraformValidate.ps1"
+        agents:
+          queue: "windows"
+
+      - label: ":conventional_commits: Validate Commits"
+        key: "validate-commits"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/validation/Test-ConventionalCommits.ps1"
+        agents:
+          queue: "windows"
+        soft_fail: true
+
+      - label: ":lint: TFLint"
+        key: "tflint"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/validation/Test-TFLint.ps1"
+        agents:
+          queue: "windows"
+        soft_fail: true
+
+  # ============================================================================
+  # PHASE 3: SECURITY SCANNING (PARALLEL WITH OVERMIND)
+  # ============================================================================
+  
+  - label: ":shield: Security Scans (Parallel)"
+    key: "security-scans"
+    depends_on: "validation-phase"
+    if: build.env("ENABLE_SECURITY_SCANNING") == "true"
+    command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/security/Invoke-ParallelScans.ps1"
+    artifact_paths:
+      - "reports/*.json"
+      - "reports/*.sarif"
+    agents:
+      queue: "windows"
+
+  # ============================================================================
+  # PHASE 4: DOCUMENTATION (TERRAFORM-DOCS)
+  # ============================================================================
+  
+  - group: "Documentation Phase"
+    key: "documentation-phase"
+    depends_on: "security-scans"
+    if: build.env("ENABLE_AUTO_DOCUMENTATION") == "true"
+    steps:
+      
+      - label: ":books: Generate terraform-docs"
+        key: "terraform-docs"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/documentation/New-TerraformDocs.ps1"
+        artifact_paths:
+          - "README.md"
+          - "docs/*.md"
+        agents:
+          queue: "windows"
+
+      - label: ":mag: Check Documentation Drift"
+        key: "docs-drift"
+        depends_on: "terraform-docs"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/documentation/Test-DocumentationDrift.ps1"
+        agents:
+          queue: "windows"
+        soft_fail: true
+
+  # ============================================================================
+  # PHASE 5: VERSIONING (GIT-CLIFF)
+  # ============================================================================
+  
+  - group: "Versioning Phase"
+    key: "versioning-phase"
+    depends_on: "documentation-phase"
+    steps:
+      
+      - label: ":cliff: Generate Changelog Preview"
+        key: "changelog-preview"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/versioning/Get-ChangelogPreview.ps1"
+        artifact_paths:
+          - "CHANGELOG-PREVIEW.md"
+        agents:
+          queue: "windows"
+
+      - label: ":calculator: Calculate Next Version"
+        key: "calculate-version"
+        command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/versioning/Get-NextVersion.ps1"
+        artifact_paths:
+          - "next-version.txt"
+          - "version-type.txt"
+        agents:
+          queue: "windows"
+
+  # ============================================================================
+  # PHASE 6: FABRIC AI CODE REVIEW
+  # ============================================================================
+  
+  - label: ":robot_face: AI Code Review"
+    key: "fabric-code-review"
+    depends_on: "versioning-phase"
+    if: build.env("ENABLE_FABRIC_AI") == "true"
+    command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/fabric/Invoke-FabricCodeReview.ps1"
+    artifact_paths:
+      - "code-review.md"
+    agents:
+      queue: "windows"
+    soft_fail: true
+
+  # ============================================================================
+  # PHASE 7: DYNAMIC ENVIRONMENT PIPELINE GENERATION
+  # ============================================================================
+  
+  - label: ":pipeline: Generate Environment Pipelines"
+    key: "generate-env-pipelines"
+    depends_on: "fabric-code-review"
+    command: "powershell -ExecutionPolicy Bypass -File .buildkite/scripts/Generate-EnvironmentPipelines.ps1"
+    agents:
+      queue: "windows"
