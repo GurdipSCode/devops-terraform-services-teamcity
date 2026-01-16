@@ -1,0 +1,17 @@
+# environments.yml
+# Configuration for dynamic environment pipeline generation
+
+environments:
+  - name: dev
+    auto_apply: true
+    branches:
+      - "*"
+    approvers: []
+
+  - name: prd
+    auto_apply: false
+    branches:
+      - main
+    approvers:
+      - platform-team
+    depends_on: dev
