@@ -1,0 +1,180 @@
+# .coderabbit.yaml
+# CodeRabbit configuration for Terraform/OpenTofu service repositories
+
+language: en-US
+
+early_access: false
+
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - develop
+      - "release/*"
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: auto
+
+path_instructions:
+  - path: "**/*.tf"
+    instructions: |
+      Review Terraform/OpenTofu configuration files for:
+      
+      **Security:**
+      - No hardcoded secrets, passwords, or API keys
+      - No overly permissive IAM policies (avoid * in actions/resources)
+      - Security groups should not allow 0.0.0.0/0 ingress on sensitive ports
+      - Encryption enabled for storage (S3, RDS, EBS)
+      - Public access disabled unless explicitly required
+      - KMS keys used for encryption where appropriate
+      
+      **Best Practices:**
+      - All resources have appropriate tags (Name, Environment, Owner, Project)
+      - Variables have descriptions and type constraints
+      - Outputs have descriptions
+      - Use data sources instead of hardcoded ARNs/IDs
+      - Provider versions are constrained
+      - Backend configuration is appropriate
+      - No deprecated resources or arguments
+      
+      **Naming Conventions:**
+      - Resource names are lowercase with underscores
+      - Resource names are descriptive and consistent
+      - Variable names follow snake_case
+      
+      **Structure:**
+      - Related resources are grouped together
+      - Locals used for repeated values
+      - Count/for_each used appropriately for multiple resources
+      - Dynamic blocks used where appropriate
+      - No duplicate code that could be modularized
+
+  - path: "**/*.tfvars"
+    instructions: |
+      Review Terraform variable files for:
+      - No secrets or sensitive values (should use Vault or environment variables)
+      - Values match expected types from variables.tf
+      - Environment-specific values are appropriate
+      - No hardcoded account IDs or ARNs
+
+  - path: "**/variables.tf"
+    instructions: |
+      Review variable definitions for:
+      - All variables have descriptions
+      - All variables have type constraints
+      - Sensitive variables marked with sensitive = true
+      - Default values are appropriate (or omitted for required vars)
+      - Validation blocks for constrained values
+      - Variables are logically grouped
+
+  - path: "**/outputs.tf"
+    instructions: |
+      Review outputs for:
+      - All outputs have descriptions
+      - Sensitive outputs marked with sensitive = true
+      - Output names are descriptive
+      - Useful values are exposed for module consumers
+
+  - path: "**/versions.tf"
+    instructions: |
+      Review version constraints for:
+      - Terraform/OpenTofu version is constrained
+      - Provider versions are constrained (not too loose, not too tight)
+      - Required providers block is present
+
+  - path: "**/backend.tf"
+    instructions: |
+      Review backend configuration for:
+      - State file encryption enabled
+      - State locking enabled (DynamoDB for S3)
+      - Appropriate bucket/container permissions
+      - No hardcoded credentials
+
+  - path: "**/providers.tf"
+    instructions: |
+      Review provider configuration for:
+      - No hardcoded credentials
+      - Region/location configured appropriately
+      - Default tags configured (AWS)
+      - Alias used for multi-region/account setups
+
+  - path: "**/modules/**/*.tf"
+    instructions: |
+      Review module code for:
+      - Module is reusable and parameterized
+      - Required variables are documented
+      - Optional variables have sensible defaults
+      - Outputs expose useful values
+      - No hardcoded values that should be variables
+      - README exists with usage examples
+
+  - path: "environments/**/*.tf"
+    instructions: |
+      Review environment-specific configuration for:
+      - Uses modules consistently
+      - Environment-appropriate sizing/configuration
+      - No secrets in environment files
+      - Backend key is unique per environment
+
+  - path: ".buildkite/**/*"
+    instructions: |
+      Review Buildkite pipeline configuration for:
+      - Steps have appropriate dependencies
+      - Agents queue is specified
+      - Artifacts are saved where needed
+      - Sensitive data handled via Vault/secrets
+      - PowerShell scripts follow best practices
+
+  - path: "**/*.ps1"
+    instructions: |
+      Review PowerShell scripts for:
+      - $ErrorActionPreference = 'Stop' at the top
+      - Proper error handling with try/catch
+      - Exit codes returned appropriately
+      - LASTEXITCODE checked after external commands
+      - No hardcoded secrets
+      - No use of aliases (use full cmdlet names)
+
+  - path: "**/CHANGELOG.md"
+    instructions: |
+      Review changelog for:
+      - Follows Keep a Changelog format
+      - Entries are clear and descriptive
+      - Breaking changes are highlighted
+
+tools:
+  shellcheck:
+    enabled: false
+  markdownlint:
+    enabled: true
+  github-checks:
+    enabled: true
+  languagetool:
+    enabled: false
+  yamllint:
+    enabled: true
+  biome:
+    enabled: false
+  hadolint:
+    enabled: false
+  swiftlint:
+    enabled: false
+  phpstan:
+    enabled: false
+  golangci-lint:
+    enabled: false
+  ast-grep:
+    enabled: false
