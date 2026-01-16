@@ -1,0 +1,199 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "schedule:weekends",
+    ":semanticCommits"
+  ],
+  "description": "Renovate config for OpenTofu repositories",
+  "labels": ["dependencies", "renovate"],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  
+  "terraform": {
+    "enabled": true
+  },
+
+  "packageRules": [
+    {
+      "description": "OpenTofu providers - minor and patch only",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["provider"],
+      "groupName": "opentofu providers",
+      "groupSlug": "opentofu-providers",
+      "labels": ["opentofu", "providers"],
+      "automerge": false,
+      "commitMessagePrefix": "chore(opentofu):",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "opentofu"
+    },
+    {
+      "description": "OpenTofu modules from registry",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["module"],
+      "matchDatasources": ["terraform-module"],
+      "groupName": "opentofu modules",
+      "groupSlug": "opentofu-modules",
+      "labels": ["opentofu", "modules"],
+      "automerge": false,
+      "commitMessagePrefix": "chore(opentofu):",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "opentofu"
+    },
+    {
+      "description": "Modules from GitHub",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["module"],
+      "matchDatasources": ["github-tags"],
+      "groupName": "opentofu github modules",
+      "groupSlug": "opentofu-github-modules",
+      "labels": ["opentofu", "modules", "github"],
+      "automerge": false
+    },
+    {
+      "description": "OpenTofu core version",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_version"],
+      "labels": ["opentofu", "core"],
+      "automerge": false,
+      "commitMessagePrefix": "chore(opentofu):",
+      "enabled": true
+    },
+    {
+      "description": "AWS provider - group together",
+      "matchManagers": ["terraform"],
+      "matchPackageNames": ["hashicorp/aws", "aws"],
+      "groupName": "aws provider",
+      "labels": ["opentofu", "aws"],
+      "automerge": false
+    },
+    {
+      "description": "Azure provider - group together",
+      "matchManagers": ["terraform"],
+      "matchPackagePatterns": ["^hashicorp/azurerm", "^azurerm"],
+      "groupName": "azure provider",
+      "labels": ["opentofu", "azure"],
+      "automerge": false
+    },
+    {
+      "description": "GitHub provider",
+      "matchManagers": ["terraform"],
+      "matchPackagePatterns": ["^integrations/github", "^hashicorp/github"],
+      "groupName": "github provider",
+      "labels": ["opentofu", "github"],
+      "automerge": false
+    },
+    {
+      "description": "Auto-merge patch updates for non-critical providers",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["provider"],
+      "matchUpdateTypes": ["patch"],
+      "excludePackagePatterns": ["^hashicorp/aws", "^hashicorp/azurerm", "^hashicorp/google"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Pin OpenTofu version",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_version"],
+      "rangeStrategy": "pin"
+    },
+    {
+      "description": "Widen provider version ranges",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["provider"],
+      "rangeStrategy": "widen"
+    }
+  ],
+
+  "regexManagers": [
+    {
+      "description": "OpenTofu version in CI files",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "^\\.buildkite/.*\\.ya?ml$",
+        "^Dockerfile$",
+        "^\\.gitlab-ci\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "opentofu_version[\"']?:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "OPENTOFU_VERSION[=:]\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "tofu_version[\"']?:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "TOFU_VERSION[=:]\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "ghcr\\.io/opentofu/opentofu:(?<currentValue>[^\"'\\s]+)",
+        "opentofu/opentofu:(?<currentValue>[^\"'\\s]+)"
+      ],
+      "depNameTemplate": "opentofu/opentofu",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "TFLint version in CI",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "^\\.buildkite/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "tflint_version[\"']?:\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "TFLINT_VERSION[=:]\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ],
+      "depNameTemplate": "terraform-linters/tflint",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "terraform-docs version",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "^\\.buildkite/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "terraform-docs_version[\"']?:\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "TERRAFORM_DOCS_VERSION[=:]\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ],
+      "depNameTemplate": "terraform-docs/terraform-docs",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "tfsec version",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "^\\.buildkite/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "tfsec_version[\"']?:\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "TFSEC_VERSION[=:]\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ],
+      "depNameTemplate": "aquasecurity/tfsec",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "trivy version",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.ya?ml$",
+        "^\\.buildkite/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "trivy_version[\"']?:\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?",
+        "TRIVY_VERSION[=:]\\s*[\"']?v?(?<currentValue>[^\"'\\s]+)[\"']?"
+      ],
+      "depNameTemplate": "aquasecurity/trivy",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+
+  "ignoreDeps": [],
+
+  "ignorePaths": [
+    "**/examples/**",
+    "**/tests/**",
+    "**/.terraform/**",
+    "**/.opentofu/**"
+  ]
+}
