@@ -1,0 +1,3 @@
+steps:
+  - label: ":construction: Pipeline not configured"
+    command: "echo 'Replace .buildkite/pipeline.yml with your actual build steps'"
